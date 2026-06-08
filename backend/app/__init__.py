@@ -26,6 +26,9 @@ def create_app(config_name: str = None) -> Flask:
     with app.app_context():
         db.create_all()
 
+    from app.routes.auth import auth_bp
+    app.register_blueprint(auth_bp)
+
     from seed import register_commands
     register_commands(app)
 
