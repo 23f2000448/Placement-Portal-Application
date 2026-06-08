@@ -2,7 +2,6 @@ import logging
 from flask import Blueprint, request, current_app
 from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
-from marshmallow import ValidationError
 from app.extensions import db
 from app.models.user import User, UserRole, UserStatus
 from app.models.company import Company
@@ -24,17 +23,13 @@ company_schema          = CompanySchema()
 
 
 
-
 @auth_bp.route("/register/student", methods=["POST"])
 def register_student():
     body = request.get_json(silent=True)
     if not body:
         return error_response("Request body must be JSON.")
 
-    try:
-        data = student_register_schema.load(body)
-    except ValidationError as e:
-        return error_response("Validation failed.", errors=e.messages, status_code=422)
+    data = student_register_schema.load(body)
 
     try:
         user = User(
@@ -54,16 +49,12 @@ def register_student():
         db.session.rollback()
         return error_response("An account with this email already exists.", status_code=409)
 
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("Unexpected error during student registration")
-        return error_response("Registration failed. Please try again.", status_code=500)
-
     return success_response(
         data=student_schema.dump(student),
         message="Student registered successfully.",
         status_code=201
     )
+
 
 
 @auth_bp.route("/register/company", methods=["POST"])
@@ -72,10 +63,7 @@ def register_company():
     if not body:
         return error_response("Request body must be JSON.")
 
-    try:
-        data = company_register_schema.load(body)
-    except ValidationError as e:
-        return error_response("Validation failed.", errors=e.messages, status_code=422)
+    data = company_register_schema.load(body)
 
     try:
         user = User(
@@ -95,11 +83,6 @@ def register_company():
         db.session.rollback()
         return error_response("An account with this email already exists.", status_code=409)
 
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("Unexpected error during company registration")
-        return error_response("Registration failed. Please try again.", status_code=500)
-
     return success_response(
         data=company_schema.dump(company),
         message="Company registered successfully. Await admin approval.",
@@ -114,10 +97,7 @@ def login():
     if not body:
         return error_response("Request body must be JSON.")
 
-    try:
-        data = login_schema.load(body)
-    except ValidationError as e:
-        return error_response("Validation failed.", errors=e.messages, status_code=422)
+    data = login_schema.load(body)
 
     user = User.query.filter_by(email=data["email"].lower()).first()
 
