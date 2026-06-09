@@ -1,14 +1,24 @@
+import os
 from flask import Flask
 from app.extensions import db, jwt, cache, mail, ma
 from app.config import config_map
-import os
 
 
 def create_app(config_name: str = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
 
     config_name = config_name or os.environ.get("FLASK_ENV", "default")
-    app.config.from_object(config_map[config_name])
+    config_obj = config_map.get(config_name)
+    if config_obj is None:
+        raise ValueError(
+            f"Invalid config name '{config_name}'. "
+            f"Valid options are: {', '.join(config_map.keys())}"
+        )
+
+    if config_name == "production":
+        config_obj.validate()
+
+    app.config.from_object(config_obj)
 
     os.makedirs(app.instance_path, exist_ok=True)
 
@@ -26,6 +36,9 @@ def create_app(config_name: str = None) -> Flask:
 
     with app.app_context():
         db.create_all()
+
+    from app.utils.errors import register_error_handlers
+    register_error_handlers(app)
 
     from app.routes.auth import auth_bp
     app.register_blueprint(auth_bp)

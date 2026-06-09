@@ -108,8 +108,9 @@ def login():
         return error_response("Your account has been deactivated. Contact admin.", status_code=403)
 
     extra_claims = {
-        "role":  user.role.value,
-        "email": user.email,
+        "user_id": user.id,
+        "role":    user.role.value,
+        "email":   user.email,
     }
 
     if user.role == UserRole.COMPANY and user.company_profile:
