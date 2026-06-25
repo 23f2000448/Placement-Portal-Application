@@ -10,11 +10,10 @@ from app.schemas.inputs import StudentProfileUpdateSchema
 
 student_bp = Blueprint("student", __name__, url_prefix="/api/student")
 
-student_schema      = StudentSchema()
-applications_schema = ApplicationSchema(many=True)
-drives_schema       = PlacementDriveSchema(many=True)
-application_schema  = ApplicationSchema()
-
+student_schema        = StudentSchema()
+applications_schema   = ApplicationSchema(many=True)
+drives_schema         = PlacementDriveSchema(many=True)
+application_schema    = ApplicationSchema()
 profile_update_schema = StudentProfileUpdateSchema()
 
 
@@ -43,7 +42,7 @@ def update_profile():
 def list_drives():
     drives = student_service.get_approved_drives(
         search=request.args.get("search"),
-        branch=request.args.get("branch")
+        branch=request.args.get("branch"),
     )
     return success_response(data=drives_schema.dump(drives), message="Drives fetched.")
 
@@ -59,7 +58,7 @@ def apply(drive_id):
     return success_response(
         data=application_schema.dump(application),
         message="Applied successfully.",
-        status_code=201
+        status_code=201,
     )
 
 
@@ -74,14 +73,10 @@ def my_applications():
 @student_bp.route("/placements", methods=["GET"])
 @student_required
 def my_placements():
-    from app.schemas.placement_drive import PlacementDriveSchema
-    from app.models.placement import Placement
-    user_id  = int(get_jwt()["user_id"])
-    records  = student_service.get_student_placements(user_id)
-
-    result = []
-    for p in records:
-        result.append({
+    user_id = int(get_jwt()["user_id"])
+    records = student_service.get_student_placements(user_id)
+    result  = [
+        {
             "id":           p.id,
             "company_name": p.company.name if p.company else None,
             "position":     p.position,
@@ -89,6 +84,38 @@ def my_placements():
             "joining_date": p.joining_date.isoformat() if p.joining_date else None,
             "status":       p.status,
             "created_at":   p.created_at.isoformat() if p.created_at else None,
-        })
-
+        }
+        for p in records
+    ]
     return success_response(data=result, message="Placement history fetched.")
+
+
+@student_bp.route("/export", methods=["POST"])
+@student_required
+def export_applications():
+    from app.tasks.exports import export_applications_csv
+    from app.models.student import Student
+
+    user_id = int(get_jwt()["user_id"])
+    student = Student.query.filter_by(user_id=user_id).first_or_404()
+    user    = student.user
+
+    task = export_applications_csv.delay(student.id, user.email, student.full_name)
+    return success_response(
+        data={"task_id": task.id},
+        message="Export started. You will receive an email once done.",
+        status_code=202,
+    )
+
+
+@student_bp.route("/export/<task_id>", methods=["GET"])
+@student_required
+def export_status(task_id):
+    from app.tasks.celery_app import celery
+    from celery.result import AsyncResult
+
+    result = AsyncResult(task_id, app=celery)
+    return success_response(
+        data={"task_id": task_id, "status": result.status},
+        message="Task status fetched.",
+    )

@@ -9,7 +9,7 @@ def create_app(config_name: str = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
 
     config_name = config_name or os.environ.get("FLASK_ENV", "default")
-    config_obj = config_map.get(config_name)
+    config_obj  = config_map.get(config_name)
     if config_obj is None:
         raise ValueError(
             f"Invalid config name '{config_name}'. "
@@ -30,6 +30,9 @@ def create_app(config_name: str = None) -> Flask:
     cache.init_app(app, config={"CACHE_TYPE": "RedisCache", "CACHE_REDIS_URL": app.config["REDIS_URL"]})
     mail.init_app(app)
     ma.init_app(app)
+
+    from app.tasks.celery_app import init_celery
+    init_celery(app)
 
     from app.models import (
         User, Company, Student, StudentSkill,
