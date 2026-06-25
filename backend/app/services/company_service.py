@@ -1,4 +1,4 @@
-from app.extensions import db
+from app.extensions import db, cache
 from app.models.company import Company
 from app.models.placement_drive import PlacementDrive
 from app.models.application import Application
@@ -20,6 +20,7 @@ def update_company_profile(user_id, data):
     return company
 
 
+@cache.memoize(timeout=300)
 def get_company_drives(company_id):
     return (
         PlacementDrive.query
@@ -31,7 +32,7 @@ def get_company_drives(company_id):
 
 def create_drive(company_id, data):
     drive = PlacementDrive(
-        company_id=data["company_id"] if "company_id" in data else company_id,
+        company_id=company_id,
         job_title=data["job_title"],
         job_description=data.get("job_description"),
         location=data.get("location"),
@@ -49,6 +50,7 @@ def create_drive(company_id, data):
         drive.set_eligible_years(data["eligible_years"])
 
     db.session.commit()
+    cache.delete_memoized(get_company_drives, company_id)
     return drive
 
 
@@ -60,6 +62,7 @@ def close_drive(drive_id, company_id):
     drive = _get_own_drive(drive_id, company_id)
     drive.status = "closed"
     db.session.commit()
+    cache.delete_memoized(get_company_drives, company_id)
     return drive
 
 

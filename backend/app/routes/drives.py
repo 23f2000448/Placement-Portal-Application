@@ -1,6 +1,6 @@
 from flask import Blueprint, request
-from app.utils.responses import success_response, error_response
-from app.extensions import db
+from app.utils.responses import success_response
+from app.extensions import db, cache
 from app.models.placement_drive import PlacementDrive
 from app.schemas.placement_drive import PlacementDriveSchema
 
@@ -11,6 +11,7 @@ drives_schema = PlacementDriveSchema(many=True)
 
 
 @drives_bp.route("", methods=["GET"])
+@cache.cached(timeout=300, query_string=True)
 def list_drives():
     search = request.args.get("search")
     q = PlacementDrive.query.filter_by(status="approved")
@@ -21,6 +22,7 @@ def list_drives():
 
 
 @drives_bp.route("/<int:drive_id>", methods=["GET"])
+@cache.cached(timeout=300)
 def get_drive(drive_id):
     drive = db.get_or_404(PlacementDrive, drive_id)
     return success_response(data=drive_schema.dump(drive), message="Drive fetched.")

@@ -1,4 +1,4 @@
-from app.extensions import db
+from app.extensions import db, cache
 from app.models.student import Student
 from app.models.placement_drive import PlacementDrive
 from app.models.application import Application
@@ -22,6 +22,7 @@ def update_student_profile(user_id, data):
     return student
 
 
+@cache.memoize(timeout=300)
 def get_approved_drives(search=None, branch=None):
     q = PlacementDrive.query.filter_by(status="approved")
     if search:
@@ -40,10 +41,8 @@ def apply_for_drive(user_id, drive_id):
 
     if drive.status != "approved":
         raise ValueError("This drive is not open for applications.")
-
     if not drive.is_open():
         raise ValueError("Application deadline has passed.")
-
     if not student.is_eligible_for(drive):
         raise ValueError("You do not meet the eligibility criteria for this drive.")
 

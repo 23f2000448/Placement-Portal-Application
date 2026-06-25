@@ -1,4 +1,4 @@
-from app.extensions import db
+from app.extensions import db, cache
 from app.models.user import User, UserStatus
 from app.models.company import Company
 from app.models.student import Student
@@ -6,24 +6,26 @@ from app.models.placement_drive import PlacementDrive
 from app.models.application import Application
 
 
+@cache.memoize(timeout=120)
 def get_dashboard_stats():
     return {
-        "total_students":    Student.query.count(),
-        "total_companies":   Company.query.count(),
-        "total_drives":      PlacementDrive.query.count(),
+        "total_students":     Student.query.count(),
+        "total_companies":    Company.query.count(),
+        "total_drives":       PlacementDrive.query.count(),
         "total_applications": Application.query.count(),
-        "pending_companies": Company.query.filter_by(approval_status="pending").count(),
-        "pending_drives":    PlacementDrive.query.filter_by(status="pending").count(),
+        "pending_companies":  Company.query.filter_by(approval_status="pending").count(),
+        "pending_drives":     PlacementDrive.query.filter_by(status="pending").count(),
     }
 
 
+@cache.memoize(timeout=300)
 def get_companies(search=None, approval_status=None):
     q = Company.query
     if search:
         q = q.filter(
             db.or_(
                 Company.name.ilike(f"%{search}%"),
-                Company.industry.ilike(f"%{search}%")
+                Company.industry.ilike(f"%{search}%"),
             )
         )
     if approval_status:
@@ -41,9 +43,12 @@ def update_company_approval(company_id, action):
         status_map = {"blacklist": "blacklisted", "deactivate": "inactive", "activate": "active"}
         company.status = status_map[action]
     db.session.commit()
+    cache.delete_memoized(get_companies)
+    cache.delete_memoized(get_dashboard_stats)
     return company
 
 
+@cache.memoize(timeout=300)
 def get_students(search=None):
     q = Student.query.join(Student.user)
     if search:
@@ -52,7 +57,7 @@ def get_students(search=None):
                 Student.full_name.ilike(f"%{search}%"),
                 Student.roll_number.ilike(f"%{search}%"),
                 Student.phone.ilike(f"%{search}%"),
-                User.email.ilike(f"%{search}%")
+                User.email.ilike(f"%{search}%"),
             )
         )
     return q.order_by(Student.created_at.desc()).all()
@@ -71,9 +76,12 @@ def update_student_status(student_id, action):
     }
     student.user.status = user_status_map[action]
     db.session.commit()
+    cache.delete_memoized(get_students)
+    cache.delete_memoized(get_dashboard_stats)
     return student
 
 
+@cache.memoize(timeout=300)
 def get_drives(status=None):
     q = PlacementDrive.query
     if status:
@@ -88,6 +96,8 @@ def update_drive_status(drive_id, action):
         raise ValueError(f"Invalid action: {action}")
     drive.status = action_map[action]
     db.session.commit()
+    cache.delete_memoized(get_drives)
+    cache.delete_memoized(get_dashboard_stats)
     return drive
 
 
