@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from flask_cors import CORS
 from app.extensions import db, jwt, cache, mail, ma
 from app.config import config_map
 
@@ -22,6 +23,8 @@ def create_app(config_name: str = None) -> Flask:
 
     os.makedirs(app.instance_path, exist_ok=True)
 
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
     db.init_app(app)
     jwt.init_app(app)
     cache.init_app(app, config={"CACHE_TYPE": "RedisCache", "CACHE_REDIS_URL": app.config["REDIS_URL"]})
@@ -42,6 +45,21 @@ def create_app(config_name: str = None) -> Flask:
 
     from app.routes.auth import auth_bp
     app.register_blueprint(auth_bp)
+
+    from app.routes.admin import admin_bp
+    app.register_blueprint(admin_bp)
+
+    from app.routes.company import company_bp
+    app.register_blueprint(company_bp)
+
+    from app.routes.student import student_bp
+    app.register_blueprint(student_bp)
+
+    from app.routes.drives import drives_bp
+    app.register_blueprint(drives_bp)
+
+    from app.routes.applications import applications_bp
+    app.register_blueprint(applications_bp)
 
     from seed import register_commands
     register_commands(app)
