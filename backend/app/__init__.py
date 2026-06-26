@@ -31,6 +31,24 @@ def create_app(config_name: str = None) -> Flask:
     mail.init_app(app)
     ma.init_app(app)
 
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        from app.models.user import User
+        user_id = jwt_payload.get("user_id")
+        if not user_id:
+            return True
+        user = db.session.get(User, int(user_id))
+        return user is None or not user.is_active()
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        from flask import jsonify
+        return jsonify({
+            "success": False,
+            "message": "Your account has been deactivated. Contact admin.",
+            "errors": {}
+        }), 401
+
     from app.tasks.celery_app import init_celery
     init_celery(app)
 

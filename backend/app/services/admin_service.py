@@ -41,7 +41,13 @@ def update_company_approval(company_id, action):
         company.approval_status = "rejected"
     else:
         status_map = {"blacklist": "blacklisted", "deactivate": "inactive", "activate": "active"}
+        user_status_map = {
+            "blacklist":  UserStatus.BLACKLISTED,
+            "deactivate": UserStatus.INACTIVE,
+            "activate":   UserStatus.ACTIVE,
+        }
         company.status = status_map[action]
+        company.user.status = user_status_map[action]
     db.session.commit()
     cache.delete_memoized(get_companies)
     cache.delete_memoized(get_dashboard_stats)
