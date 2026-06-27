@@ -96,6 +96,7 @@ def get_drives(status=None):
 
 
 def update_drive_status(drive_id, action):
+    from app.services.student_service import get_approved_drives
     drive = db.get_or_404(PlacementDrive, drive_id)
     action_map = {"approve": "approved", "reject": "rejected", "close": "closed"}
     if action not in action_map:

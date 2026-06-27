@@ -3,6 +3,7 @@ from app.utils.responses import success_response
 from app.extensions import db, cache
 from app.models.placement_drive import PlacementDrive
 from app.schemas.placement_drive import PlacementDriveSchema
+from app.services.student_service import get_approved_drives
 
 drives_bp = Blueprint("drives", __name__, url_prefix="/api/drives")
 
@@ -11,13 +12,8 @@ drives_schema = PlacementDriveSchema(many=True)
 
 
 @drives_bp.route("", methods=["GET"])
-@cache.cached(timeout=300, query_string=True)
 def list_drives():
-    search = request.args.get("search")
-    q = PlacementDrive.query.filter_by(status="approved")
-    if search:
-        q = q.filter(PlacementDrive.job_title.ilike(f"%{search}%"))
-    drives = q.order_by(PlacementDrive.created_at.desc()).all()
+    drives = get_approved_drives(search=request.args.get("search"))
     return success_response(data=drives_schema.dump(drives), message="Drives fetched.")
 
 

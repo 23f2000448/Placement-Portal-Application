@@ -59,10 +59,12 @@ def _get_own_drive(drive_id, company_id):
 
 
 def close_drive(drive_id, company_id):
+    from app.services.student_service import get_approved_drives
     drive = _get_own_drive(drive_id, company_id)
     drive.status = "closed"
     db.session.commit()
     cache.delete_memoized(get_company_drives, company_id)
+    cache.delete_memoized(get_approved_drives)
     return drive
 
 
