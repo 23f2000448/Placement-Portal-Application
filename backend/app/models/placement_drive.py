@@ -67,6 +67,11 @@ class PlacementDrive(db.Model):
         onupdate=lambda: datetime.now(timezone.utc)
     )
 
+    __table_args__ = (
+        db.Index("ix_placement_drives_company_id", "company_id"),
+        db.Index("ix_placement_drives_status", "status"),
+    )
+
     company = db.relationship("Company", back_populates="placement_drives")
     applications = db.relationship("Application", back_populates="drive", lazy="dynamic")
     branch_entries = db.relationship(
