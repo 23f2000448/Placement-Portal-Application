@@ -1,3 +1,4 @@
+from sqlalchemy.orm import joinedload
 from app.extensions import db, cache
 from app.models.student import Student
 from app.models.placement_drive import PlacementDrive
@@ -61,6 +62,7 @@ def get_student_applications(user_id):
     return (
         Application.query
         .filter_by(student_id=student.id)
+        .options(joinedload(Application.drive).joinedload(PlacementDrive.company))
         .order_by(Application.applied_at.desc())
         .all()
     )

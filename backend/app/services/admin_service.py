@@ -1,3 +1,4 @@
+from sqlalchemy.orm import joinedload
 from app.extensions import db, cache
 from app.models.user import User, UserStatus
 from app.models.company import Company
@@ -105,8 +106,17 @@ def update_drive_status(drive_id, action):
     db.session.commit()
     cache.delete_memoized(get_drives)
     cache.delete_memoized(get_dashboard_stats)
+    cache.delete_memoized(get_approved_drives)
     return drive
 
 
 def get_all_applications():
-    return Application.query.order_by(Application.applied_at.desc()).all()
+    return (
+        Application.query
+        .options(
+            joinedload(Application.student),
+            joinedload(Application.drive).joinedload(PlacementDrive.company),
+        )
+        .order_by(Application.applied_at.desc())
+        .all()
+    )
