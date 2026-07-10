@@ -31,6 +31,7 @@ class Config:
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "false").lower() == "true"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", None)
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", None)
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "noreply@placement.local")
 
 
 class DevelopmentConfig(Config):
